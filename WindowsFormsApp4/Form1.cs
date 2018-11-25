@@ -13,8 +13,8 @@ namespace WindowsFormsApp4
 {
     public partial class Form1 : Form
     {
-        public int numberOfCities = 100;
-        Random rnd = new Random(10);
+        public int numberOfCities = 50;
+        Random rnd = new Random();
         public Tour tour;
         Stop[] Stoplist;
         public Stopwatch stopwatch = new Stopwatch();
