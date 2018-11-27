@@ -14,7 +14,7 @@ namespace WindowsFormsApp4
     public partial class Form1 : Form
     {
         public int numberOfCities = 50;
-        Random rnd = new Random();
+        Random rnd = new Random(10);
         public Tour tour;
         Stop[] Stoplist;
         public Stopwatch stopwatch = new Stopwatch();
@@ -27,29 +27,38 @@ namespace WindowsFormsApp4
      //It goes over possible swaps and changes the bestTour if it has found a better one, does this until the tsp if fully optimized.
         Tour TourMutations(Tour tour)
         {
-            Tour[] possibleMutations = new Tour[numberOfCities];
             bool improved = true;
-            float bestDistance = TourDistance(tour);
-            Tour bestTour = tour;
+            float bestDistance = tour.cost;
+            int improvX =0;
+            int improvY =0;
             while(improved)
             {
                 improved = false;
                 for (int x = 1; x < numberOfCities-1; x++)
                 {
-                    for (int y = x+1; y < numberOfCities; y++)
-                    {                     
-                        Tour newTour = TourClone(bestTour,x,y);
-                        float newDistance = TourDistance(newTour);
-                        if(newDistance<bestDistance)
+                    for (int y = x+1; y < numberOfCities-1; y++)
+                    {
+                        float distanceBefore = Distance(tour.AllStops[x - 1].city.city, tour.AllStops[x].city.city) + Distance(tour.AllStops[y].city.city, tour.AllStops[y + 1].city.city);
+                        
+                        float deltaChange = Distance(tour.AllStops[x - 1].city.city, tour.AllStops[y].city.city) + Distance(tour.AllStops[x].city.city, tour.AllStops[y + 1].city.city);
+                        if(deltaChange<distanceBefore)
                         {
                             improved = true;
-                            bestTour = newTour;
-                            bestDistance = newDistance;
+                            bestDistance = bestDistance - distanceBefore + deltaChange;
+                            improvX = x;
+                            improvY = y;
                         }
                     }
                 }
+
+                if(improved)
+                    tour = TourClone(tour, improvX, improvY);
+
             }
-            return bestTour;
+
+            if (improved)
+                return TourClone(tour,improvX,improvY);
+            return tour;
 
         }
 
@@ -137,7 +146,8 @@ namespace WindowsFormsApp4
         private void Form1_Click(object sender, EventArgs e)
         {
             stopwatch.Start();
-            tour = TourMutations(tour);            
+            tour = TourMutations(tour);
+            Console.WriteLine("Cost is " + TourDistance(tour));
             Invalidate();
             Console.WriteLine((float)(stopwatch.ElapsedMilliseconds)/1000f + "s");
             stopwatch.Stop();
@@ -177,10 +187,19 @@ namespace WindowsFormsApp4
     {
         public Stop[] AllStops;
         public float cost;
-        public Tour(Stop[] AllStops)
+        public Tour(Stop[] AllStops, float cost = -1f)
         {
             this.AllStops = AllStops;
-            cost = Form1.TourDistance(this);
+
+
+            if(cost > 0)
+            {
+                this.cost = cost;
+            }
+            else
+            {
+                cost = Form1.TourDistance(this);
+            }
         }
     }
 }
