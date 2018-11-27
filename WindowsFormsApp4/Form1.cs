@@ -14,7 +14,12 @@ namespace WindowsFormsApp4
     public partial class Form1 : Form
     {
         public int numberOfCities = 50;
-        Random rnd = new Random(10);
+
+        //For the same citymap
+        Random rnd2 = new Random(10);
+        //For random annealing
+        Random rnd = new Random();
+
         public Tour tour;
         Stop[] Stoplist;
         public Stopwatch stopwatch = new Stopwatch();
@@ -24,24 +29,23 @@ namespace WindowsFormsApp4
             InitializeComponent();
         }
 
-     //It goes over possible swaps and changes the bestTour if it has found a better one, does this until the tsp if fully optimized.
+        //It goes over possible swaps and changes the bestTour if it has found a better one, does this until the tsp if fully optimized.
         Tour TourMutations(Tour tour)
         {
             bool improved = true;
             float bestDistance = tour.cost;
-            int improvX =0;
-            int improvY =0;
-            while(improved)
+            int improvX = 0; int improvY = 0;
+            while (improved)
             {
                 improved = false;
-                for (int x = 1; x < numberOfCities-1; x++)
+                for (int x = 1; x < numberOfCities - 1; x++)
                 {
-                    for (int y = x+1; y < numberOfCities-1; y++)
+                    for (int y = x + 1; y < numberOfCities - 1; y++)
                     {
                         float distanceBefore = Distance(tour.AllStops[x - 1].city.city, tour.AllStops[x].city.city) + Distance(tour.AllStops[y].city.city, tour.AllStops[y + 1].city.city);
-                        
+
                         float deltaChange = Distance(tour.AllStops[x - 1].city.city, tour.AllStops[y].city.city) + Distance(tour.AllStops[x].city.city, tour.AllStops[y + 1].city.city);
-                        if(deltaChange<distanceBefore)
+                        if (deltaChange < distanceBefore)
                         {
                             improved = true;
                             bestDistance = bestDistance - distanceBefore + deltaChange;
@@ -51,31 +55,76 @@ namespace WindowsFormsApp4
                     }
                 }
 
-                if(improved)
+                if (improved)
                     tour = TourClone(tour, improvX, improvY);
 
             }
 
-            if (improved)
-                return TourClone(tour,improvX,improvY);
-            return tour;
-
+            return TourClone(tour, improvX, improvY);
         }
 
+        float acceptance(float oldC, float newC, float T)
+        {
+            float between = (newC - oldC) / T;
+            return (float)Math.Exp((double)between);
+        }
+
+        //Mutation with SimulAnneal
+        Tour SimulAnnealTourMutations(Tour tour)
+        {
+            //Parameters
+            float alpha = 0.99f;
+            float T_min = 0.00001f;
+            float T = 1.0f;
+
+            float oldDistance = tour.cost;
+            int x; int y;
+
+            while (T > T_min)
+            {
+                int i = 0;
+                while (i < 100)
+                {
+                    i++;
+                    while (true)
+                    {
+                        x = rnd.Next(1, numberOfCities - 1);
+                        y = rnd.Next(1, numberOfCities - 1);
+                        if (x != y)
+                            break;
+                    }
+
+                    float distanceBefore = Distance(tour.AllStops[x - 1].city.city, tour.AllStops[x].city.city) + Distance(tour.AllStops[y].city.city, tour.AllStops[y + 1].city.city);
+                    float deltaChange = Distance(tour.AllStops[x - 1].city.city, tour.AllStops[y].city.city) + Distance(tour.AllStops[x].city.city, tour.AllStops[y + 1].city.city);
+                    float newDistance = oldDistance - distanceBefore + deltaChange;
+
+                    if (acceptance(distanceBefore, deltaChange, T) < (float)rnd.NextDouble())
+                    {
+                        tour = TourClone(tour, x, y);
+                        oldDistance = newDistance;
+                    }
+                }
+                T = T * alpha;
+            }
+            return tour;
+        }
+
+
+
         //Individually copy the stops, not sure if necessary but probably cuz otherwise you would copy an array
-        Tour TourClone(Tour tour,int x, int y)
+        Tour TourClone(Tour tour, int x, int y)
         {
             //How 2-opt works (the swap)
             Stop[] stopListNew = new Stop[tour.AllStops.Length];
-            for (int i = 0; i <= x-1; i++)
+            for (int i = 0; i <= x - 1; i++)
             {
                 stopListNew[i] = new Stop(tour.AllStops[i].city);
             }
             for (int i = x; i <= y; i++)
             {
-                stopListNew[y-(i-x)] = new Stop(tour.AllStops[i].city);
+                stopListNew[y - (i - x)] = new Stop(tour.AllStops[i].city);
             }
-            for (int i = y+1; i < tour.AllStops.Length; i++)
+            for (int i = y + 1; i < tour.AllStops.Length; i++)
             {
                 stopListNew[i] = new Stop(tour.AllStops[i].city);
             }
@@ -94,7 +143,7 @@ namespace WindowsFormsApp4
         static public float TourDistance(Tour tour)
         {
             float totalDistance = 0f;
-            foreach(Stop stop in tour.AllStops)
+            foreach (Stop stop in tour.AllStops)
             {
                 totalDistance += Distance(stop.city.city, stop.prevNext[1].city.city);
             }
@@ -114,7 +163,7 @@ namespace WindowsFormsApp4
             Stoplist = new Stop[numberOfCities];
             for (int i = 0; i < numberOfCities; i++)
             {
-                City newcity = new City(rnd.Next(100, 800 - 100), rnd.Next(100, 800 - 100), i);
+                City newcity = new City(rnd2.Next(100, 800 - 100), rnd2.Next(100, 800 - 100), i);
                 Stoplist[i] = new Stop(newcity);
             }
 
@@ -146,10 +195,10 @@ namespace WindowsFormsApp4
         private void Form1_Click(object sender, EventArgs e)
         {
             stopwatch.Start();
-            tour = TourMutations(tour);
+            tour = SimulAnnealTourMutations(tour);
             Console.WriteLine("Cost is " + TourDistance(tour));
             Invalidate();
-            Console.WriteLine((float)(stopwatch.ElapsedMilliseconds)/1000f + "s");
+            Console.WriteLine((float)(stopwatch.ElapsedMilliseconds) / 1000f + "s");
             stopwatch.Stop();
         }
     }
@@ -187,19 +236,10 @@ namespace WindowsFormsApp4
     {
         public Stop[] AllStops;
         public float cost;
-        public Tour(Stop[] AllStops, float cost = -1f)
+        public Tour(Stop[] AllStops)
         {
             this.AllStops = AllStops;
-
-
-            if(cost > 0)
-            {
-                this.cost = cost;
-            }
-            else
-            {
-                cost = Form1.TourDistance(this);
-            }
+            cost = Form1.TourDistance(this);
         }
     }
 }
