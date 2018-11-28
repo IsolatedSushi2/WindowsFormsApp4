@@ -14,15 +14,16 @@ namespace WindowsFormsApp4
     public partial class Form1 : Form
     {
         public int numberOfCities = 50;
+        public Stopwatch stopwatch = new Stopwatch();
 
         //For the same citymap
-        Random rnd2 = new Random(10);
+        Random rnd2 = new Random(1);
         //For random annealing
         Random rnd = new Random();
 
         public Tour tour;
         Stop[] Stoplist;
-        public Stopwatch stopwatch = new Stopwatch();
+
         public Form1()
         {
             SetupCities();
@@ -66,7 +67,7 @@ namespace WindowsFormsApp4
         float acceptance(float oldC, float newC, float T)
         {
             float between = (newC - oldC) / T;
-            return (float)Math.Exp((double)between);
+            return (float)Math.Exp(between);
         }
 
         //Mutation with SimulAnneal
@@ -74,8 +75,9 @@ namespace WindowsFormsApp4
         {
             //Parameters
             float alpha = 0.99f;
-            float T_min = 0.00001f;
-            float T = 1.0f;
+            float T_min = 0.01f;
+            float T = 16.0f;
+            int iterations =100;
 
             float oldDistance = tour.cost;
             int x; int y;
@@ -83,13 +85,13 @@ namespace WindowsFormsApp4
             while (T > T_min)
             {
                 int i = 0;
-                while (i < 100)
+                while (i < iterations)
                 {
                     i++;
                     while (true)
                     {
-                        x = rnd.Next(1, numberOfCities - 1);
-                        y = rnd.Next(1, numberOfCities - 1);
+                        x = rnd.Next(1, numberOfCities);
+                        y = rnd.Next(0, numberOfCities - 1);
                         if (x != y)
                             break;
                     }
@@ -98,7 +100,12 @@ namespace WindowsFormsApp4
                     float deltaChange = Distance(tour.AllStops[x - 1].city.city, tour.AllStops[y].city.city) + Distance(tour.AllStops[x].city.city, tour.AllStops[y + 1].city.city);
                     float newDistance = oldDistance - distanceBefore + deltaChange;
 
-                    if (acceptance(distanceBefore, deltaChange, T) < (float)rnd.NextDouble())
+                    if(deltaChange < distanceBefore)
+                    {
+                        tour = TourClone(tour, x, y);
+                        oldDistance = newDistance;
+                    }
+                    else if (acceptance(distanceBefore, deltaChange, T) < (float)rnd.NextDouble())
                     {
                         tour = TourClone(tour, x, y);
                         oldDistance = newDistance;
@@ -152,7 +159,7 @@ namespace WindowsFormsApp4
         }
 
 
-        //Calculates the distance between 2 points
+        //Calculates the distance between 2 points.. Dont need this in our assignment
         static float Distance(Point a, Point b)
         {
             return (float)(Math.Pow(a.X - b.X, 2) + Math.Pow(a.Y - b.Y, 2));
